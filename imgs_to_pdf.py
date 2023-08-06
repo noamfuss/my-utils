@@ -47,7 +47,10 @@ def sort_files(directory:str) -> list:
             if digits:
                 full_name = root + os.sep + filename
                 images.append((digits, full_name))
+    # Sorting the list by the digits
     images.sort(key=lambda a: a[0])
+
+    # Taking the images only out of (digits, *image*)
     sorted_filenames = list(map(lambda a: a[1], images))
 
 if __name__ == "__main__":

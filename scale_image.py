@@ -68,7 +68,7 @@ def _generate_save_name(file_dir:str, new_name:str, out_dir:str) -> str:
         return save_name
 
 
-def crop_image(img_dir:str, scale:float=0, out_dir:str=".", resolution:tuple=()):
+def crop_image(img_dir:str, scale:float=0, out_dir:str=".", resolution:tuple=(), override:bool=False):
     """
         Cropping an image by a percentage or by a specific resolution
     """
@@ -116,12 +116,33 @@ def scale_image(img_dir:str, scale:float=0, out_dir:str=".", new_name:str="", re
         width, height = image.size
         new_width, new_height = int(width * scale), int(height * scale)
 
+    filename, ext = os.path.splitext(img_dir)
+    # Converting to jpg if it's a png
+    if ext.lower() == ".png":
+        new_image = image.convert('RGB')
     new_image = image.resize((new_width, new_height))
-    save_name = _generate_save_name(img_dir, new_name, out_dir)
+    if new_name:
+        save_name = new_name
+    else:
+        save_name = f"{out_dir}{os.sep}{os.path.basename(filename)}.jpg"
+
+    #save_name = _generate_save_name(img_dir, new_name, out_dir)
     new_image.save(save_name)
 
 
-def scale_dir(dir_name:str, scale:float, resolution:tuple=()) -> None:
+def ls_recursively(dirname:str):
+    """
+        Scanning in a dir files recursively
+        solves the error when trying to OCR a dir
+    """
+    full_names = []
+    for root, dirs, files in os.walk(dirname):
+        for f in files:
+            full_names.append(os.path.join(root, f))
+    return full_names
+
+
+def scale_dir(dir_name:str, scale:float, override:bool=False, resolution:tuple=()) -> None:
     """
         Scaling a directory of images by the 'scale' margin, 
         Saving to 'out_dir'
@@ -129,12 +150,19 @@ def scale_dir(dir_name:str, scale:float, resolution:tuple=()) -> None:
     out_dir = dir_name + os.sep + "Scaled"
     out_dir = create_dir(out_dir)
 
-    iterable = os.listdir(dir_name)
+    # iterable = os.listdir(dir_name)
+    iterable = ls_recursively(dir_name)
     for i, img_name in tqdm(enumerate(iterable), desc= "Scaled", total=len(iterable), unit="pic"):
-        img_name_and_dir = dir_name + img_name
+        # img_name_and_dir = dir_name + img_name
+        img_name_and_dir = img_name
         _, extension = os.path.splitext(img_name_and_dir)  # Seperating the file dir and extension
-        if extension.lower() in SUPPORTED_IMAGES:
-            scale_image(img_name_and_dir, scale, out_dir)
+        if not extension.lower() in SUPPORTED_IMAGES:
+            continue
+        if override:
+            new_name = os.path.splitext(img_name)[0] + '.jpg'
+            scale_image(img_name_and_dir, scale, new_name=new_name, resolution=resolution)
+        else:
+            scale_image(img_name_and_dir, scale, out_dir, resolution=resolution)
             # print(f"Scaled {i}")
 
 
@@ -182,6 +210,7 @@ def _set_action(dir:str, is_cropping:bool) -> tuple:
 
 def main(args):
     dir = args.d
+    override = args.override
     #Sorting
     if args.sort:
         list_n_sort_dir(dir)
@@ -201,10 +230,10 @@ def main(args):
     # One arg means a percentage for scaling/cropping
     if len(main_arg) == 1:
         scale = main_arg[0] / 100
-        action(dir, scale)
+        action(dir, scale, override=override)
      # Two args mean it's a resolution for scaling/cropping
     elif len(main_arg) == 2:
-        action(dir, resolution=main_arg)
+        action(dir, resolution=main_arg, override=override)
     
     else:
         print("exiting...")
@@ -216,6 +245,7 @@ if __name__ == "__main__":
     parser.add_argument('-s', help='scale or resolution for resizing(1-99 or x,x)', nargs="*", type=int)
     parser.add_argument('-c', help='scale or resolution for cropping(1-99 or x,x)', nargs="*", type=int)
     parser.add_argument('--sort', help='whether to sort the images', action="store_true")
+    parser.add_argument('--override', help='whether to override the existing images', action="store_true")
     args = parser.parse_args()
     main(args)
     
