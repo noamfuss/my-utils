@@ -100,7 +100,7 @@ def crop_dir(dir_name:str, scale:float=0, resolution:tuple=()):
             print(f"Cropped {i}")
 
 
-def scale_image(img_dir:str, scale:float=0, out_dir:str=".", new_name:str="", resolution:tuple=()) -> None:
+def scale_image(img_dir:str, scale:float=0, out_dir:str=".", new_name:str="", resolution:tuple=(), override="") -> None:
     """
         Scaling an image by a percentage or by a specific resolution
     """
@@ -119,7 +119,7 @@ def scale_image(img_dir:str, scale:float=0, out_dir:str=".", new_name:str="", re
     filename, ext = os.path.splitext(img_dir)
     # Converting to jpg if it's a png
     if ext.lower() == ".png":
-        new_image = image.convert('RGB')
+        image = image.convert('RGB')
     new_image = image.resize((new_width, new_height))
     if new_name:
         save_name = new_name
@@ -127,7 +127,11 @@ def scale_image(img_dir:str, scale:float=0, out_dir:str=".", new_name:str="", re
         save_name = f"{out_dir}{os.sep}{os.path.basename(filename)}.jpg"
 
     #save_name = _generate_save_name(img_dir, new_name, out_dir)
-    new_image.save(save_name)
+    try:
+        new_image.save(save_name)
+    except Exception as e:
+        print(e)
+        print(f"Error at {save_name}")
 
 
 def ls_recursively(dirname:str):
